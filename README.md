@@ -1,4 +1,4 @@
-# 📖 Notebook Vision - AI-Powered OCR Flashcard Generator
+# � Notebook Vision - AI-Powered OCR Flashcard Generator
 
 Transform your handwritten notes into digital flashcards with AI-powered OCR technology. Notebook Vision uses EasyOCR to extract text from images of handwritten notes and automatically generates flashcards from Q/A patterns.
 
@@ -6,7 +6,7 @@ Transform your handwritten notes into digital flashcards with AI-powered OCR tec
 
 ## ✨ Features
 
-- **📱 Drag & Drop Upload**: Easy image upload interface with drag-and-drop support
+- 📱 Drag & Drop Upload: Easy image upload interface
 - **🤖 AI-Powered OCR**: Uses EasyOCR for accurate handwriting recognition
 - **🎯 Smart Flashcard Generation**: Automatically detects Q/A patterns and creates flashcards
 - **📝 Text Extraction**: Extract all text from handwritten notes
@@ -40,7 +40,7 @@ notebook-vision/
 
 ### Prerequisites
 
-- **Python 3.9+** (for backend)
+- Python 3.9+ (backend)
 - **Node.js 16+** (for frontend)
 - **Git** (for cloning)
 
@@ -132,11 +132,6 @@ A1: The process by which plants convert sunlight into energy
 ```
 
 Supported question/answer patterns:
-- `Q:` / `A:`
-- `Question:` / `Answer:`
-- `Q1:`, `Q2:` / `A1:`, `A2:`
-- `1.`, `2.` (numbered questions)
-- Lines ending with `?` (question mark)
 
 ## 🔧 Configuration
 
@@ -144,17 +139,11 @@ Supported question/answer patterns:
 
 The backend can be configured by modifying `backend/main.py`:
 
-- **Port**: Change the port in the `uvicorn.run()` call
-- **CORS**: Modify `allow_origins` for production deployment
-- **OCR Languages**: Update `languages` parameter in OCRProcessor initialization
-- **GPU/CPU**: Set `gpu=False` for CPU-only processing
 
 ### Frontend Configuration
 
 The frontend configuration is in `frontend/vite.config.js`:
 
-- **Port**: Change the `server.port` value
-- **Backend URL**: Update `BACKEND_URL` in `UploadForm.jsx` for different backend locations
 
 ## 🛠️ Development
 
@@ -195,10 +184,6 @@ npm run lint
 
 ### Backend API
 
-- **GET** `/` - Health check and API status
-- **GET** `/health` - Detailed health check
-- **POST** `/api/upload/` - Upload image and extract text/flashcards
-- **POST** `/api/test-flashcard-extraction/` - Test flashcard extraction with text input
 
 ### Example API Usage
 
@@ -301,10 +286,6 @@ If you see CORS errors in the browser console:
 
 ## 🔒 Security Considerations
 
-- **File Size Limits**: Backend enforces 10MB file size limit
-- **File Type Validation**: Only image files are accepted
-- **CORS**: Configure appropriate CORS settings for production
-- **Input Sanitization**: All text processing includes input validation
 
 ## 🚀 Deployment
 
@@ -364,21 +345,9 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- **EasyOCR**: Amazing OCR library by JaidedAI
-- **FastAPI**: Modern, fast web framework for building APIs
-- **React**: User interface library
-- **Vite**: Next generation frontend tooling
 
 ## 📈 Roadmap
 
-- [ ] Support for multiple languages
-- [ ] Advanced flashcard formatting options
-- [ ] Export flashcards to different formats (Anki, CSV, etc.)
-- [ ] Batch processing for multiple images
-- [ ] User accounts and flashcard saving
-- [ ] Mobile app version
-- [ ] Integration with popular flashcard apps
 
----
 
 **Made with ❤️ using React, FastAPI, and EasyOCR**
