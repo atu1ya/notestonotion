@@ -1,3 +1,114 @@
+# --- Flashcard Data Model (in-memory for MVP) ---
+import uuid
+from datetime import datetime
+
+class Deck:
+    def __init__(self, name):
+        self.id = str(uuid.uuid4())
+        self.name = name
+        self.created_at = datetime.utcnow().isoformat()
+        self.updated_at = self.created_at
+
+class Flashcard:
+    def __init__(self, question, answer, deck=None, tags=None):
+        self.id = str(uuid.uuid4())
+        self.question = question
+        self.answer = answer
+        self.deck = deck or "Default"
+        self.tags = tags or []
+        self.created_at = datetime.utcnow().isoformat()
+        self.updated_at = self.created_at
+        self.assessment = {"current": None, "history": []}
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "question": self.question,
+            "answer": self.answer,
+            "deck": self.deck,
+            "tags": self.tags,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "assessment": self.assessment
+        }
+
+# In-memory stores (replace with DB in production)
+DECKS = {"Default": Deck("Default")}
+FLASHCARDS = {}
+
+# --- Deck CRUD ---
+def create_deck(name):
+    if name in DECKS:
+        return None
+    deck = Deck(name)
+    DECKS[name] = deck
+    return deck
+
+def rename_deck(old_name, new_name):
+    if old_name not in DECKS or new_name in DECKS:
+        return False
+    DECKS[new_name] = DECKS.pop(old_name)
+    DECKS[new_name].name = new_name
+    DECKS[new_name].updated_at = datetime.utcnow().isoformat()
+    # Move flashcards
+    for fc in FLASHCARDS.values():
+        if fc.deck == old_name:
+            fc.deck = new_name
+    return True
+
+def delete_deck(name):
+    if name == "Default" or name not in DECKS:
+        return False
+    del DECKS[name]
+    # Move flashcards to Default
+    for fc in FLASHCARDS.values():
+        if fc.deck == name:
+            fc.deck = "Default"
+    return True
+
+# --- Flashcard CRUD/Tag/Assessment ---
+def add_flashcard(question, answer, deck="Default", tags=None):
+    fc = Flashcard(question, answer, deck, tags)
+    FLASHCARDS[fc.id] = fc
+    return fc
+
+def tag_flashcard(fc_id, tag):
+    fc = FLASHCARDS.get(fc_id)
+    if fc and tag not in fc.tags:
+        fc.tags.append(tag)
+        fc.updated_at = datetime.utcnow().isoformat()
+        return True
+    return False
+
+def untag_flashcard(fc_id, tag):
+    fc = FLASHCARDS.get(fc_id)
+    if fc and tag in fc.tags:
+        fc.tags.remove(tag)
+        fc.updated_at = datetime.utcnow().isoformat()
+        return True
+    return False
+
+def update_assessment(fc_id, score):
+    fc = FLASHCARDS.get(fc_id)
+    if fc:
+        now = datetime.utcnow().isoformat()
+        fc.assessment["current"] = score
+        fc.assessment["history"].append({"timestamp": now, "score": score})
+        fc.updated_at = now
+        return True
+    return False
+
+def search_flashcards(query=None, deck=None, tag=None, assessment=None):
+    results = list(FLASHCARDS.values())
+    if query:
+        results = [fc for fc in results if query.lower() in fc.question.lower() or query.lower() in fc.answer.lower()]
+    if deck:
+        results = [fc for fc in results if fc.deck == deck]
+    if tag:
+        results = [fc for fc in results if tag in fc.tags]
+    if assessment:
+        results = [fc for fc in results if fc.assessment["current"] == assessment]
+    return [fc.to_dict() for fc in results]
 import io
 import re
 from typing import List, Dict, Tuple
@@ -68,6 +179,69 @@ class OCRProcessor:
                 "flashcards": [],
                 "total_flashcards": 0
             }
+
+# --- Free, Local Semantic Flashcard Extraction ---
+def extract_semantic_flashcards(text):
+    """
+    Extract semantic flashcards using spaCy and regex (no paid LLMs).
+    Returns Q/A, definitions, fill-in-the-blanks, and fact pairs.
+    """
+    import re
+    try:
+        import spacy
+    except ImportError:
+        return {"error": "spaCy not installed. Please add 'spacy' to requirements.txt."}
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except Exception:
+        return {"error": "spaCy English model not installed. Run: python -m spacy download en_core_web_sm"}
+    doc = nlp(text)
+    flashcards = []
+    # Q/A pairs (Q: ... A: ...)
+    qa_pattern = re.compile(r"Q[:\.]\s*(.+?)\s*A[:\.]\s*(.+?)(?=\n|$)", re.DOTALL)
+    for match in qa_pattern.finditer(text):
+        question, answer = match.group(1).strip(), match.group(2).strip()
+        if question and answer:
+            flashcards.append({"question": question, "answer": answer, "type": "qa"})
+    # Definitions (Term: Definition)
+    def_pattern = re.compile(r"(.+?):\s*(.+)")
+    for match in def_pattern.finditer(text):
+        term, definition = match.group(1).strip(), match.group(2).strip()
+        if term and definition and len(term.split()) < 6:
+            flashcards.append({"question": f"What is {term}?", "answer": definition, "type": "definition"})
+    # Fill-in-the-blank (detect sentences with a key entity)
+    for sent in doc.sents:
+        ents = [ent for ent in sent.ents if ent.label_ in ("PERSON", "ORG", "GPE", "DATE", "EVENT", "WORK_OF_ART")]
+        for ent in ents:
+            question = sent.text.replace(ent.text, "____")
+            answer = ent.text
+            if len(answer) > 2 and len(question) > 10:
+                flashcards.append({"question": question, "answer": answer, "type": "fill_blank"})
+    # Fact pairs (simple SVO extraction)
+    for sent in doc.sents:
+        subj = None
+        obj = None
+        verb = None
+        for token in sent:
+            if token.dep_ == "nsubj":
+                subj = token.text
+            if token.dep_ == "dobj":
+                obj = token.text
+            if token.pos_ == "VERB":
+                verb = token.text
+        if subj and verb and obj:
+            question = f"What does {subj} {verb}?"
+            answer = obj
+            flashcards.append({"question": question, "answer": answer, "type": "fact"})
+    # Remove duplicates
+    seen = set()
+    unique_flashcards = []
+    for card in flashcards:
+        key = (card["question"].lower(), card["answer"].lower())
+        if key not in seen:
+            unique_flashcards.append(card)
+            seen.add(key)
+    return unique_flashcards
     
     def _extract_flashcards(self, text: str) -> List[Dict[str, str]]:
         """

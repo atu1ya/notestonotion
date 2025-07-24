@@ -4,6 +4,11 @@ import './UploadForm.css'
 const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
   const [dragOver, setDragOver] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
+  const [semanticMode, setSemanticMode] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [showCamera, setShowCamera] = useState(false)
+  const [cameraStream, setCameraStream] = useState(null)
+  const videoRef = useRef(null)
   const fileInputRef = useRef(null)
 
   const BACKEND_URL = 'http://localhost:8000'
@@ -24,6 +29,51 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
     }
 
     setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  // Camera capture logic
+  const handleTakePhotoClick = async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        setCameraStream(stream)
+        setShowCamera(true)
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      } catch (err) {
+        onError('Unable to access camera: ' + err.message)
+      }
+    } else {
+      onError('Camera not supported on this device/browser.')
+    }
+  }
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob(blob => {
+      if (blob) {
+        const file = new File([blob], 'captured_photo.jpg', { type: 'image/jpeg' })
+        setSelectedFile(file)
+        setPreviewUrl(URL.createObjectURL(blob))
+        stopCamera()
+      }
+    }, 'image/jpeg', 0.95)
+  }
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+      setCameraStream(null)
+    }
+    setShowCamera(false)
   }
 
   const handleDragOver = (e) => {
@@ -66,7 +116,8 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
       onLoadingChange(true)
       onError('') // Clear any previous errors
 
-      const response = await fetch(`${BACKEND_URL}/api/upload/`, {
+      const endpoint = semanticMode ? '/api/upload/semantic/' : '/api/upload/'
+      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: 'POST',
         body: formData,
       })
@@ -77,10 +128,10 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
       }
 
       const data = await response.json()
-      
       if (data.success) {
-        onSuccess(data)
+        onSuccess(data, semanticMode)
         setSelectedFile(null) // Clear selected file after successful upload
+        setPreviewUrl(null)
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
@@ -104,6 +155,7 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
 
   const clearSelection = () => {
     setSelectedFile(null)
+    setPreviewUrl(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -120,49 +172,62 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={!selectedFile ? handleBrowseClick : undefined}
+        onClick={!selectedFile && !showCamera ? handleBrowseClick : undefined}
       >
+        {/* File input for both upload and mobile camera */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          capture="environment"
           onChange={handleFileInputChange}
           className="file-input"
           disabled={isLoading}
         />
 
-        {!selectedFile ? (
-          <div className="upload-prompt">
-            <div className="upload-icon">📁</div>
-            <h3>Upload Your Handwritten Notes</h3>
-            <p>Drag and drop an image here, or click to browse</p>
-            <p className="file-info">
-              Supported formats: JPEG, PNG, BMP, TIFF (max 10MB)
-            </p>
-          </div>
-        ) : (
-          <div className="file-selected">
-            <div className="file-icon">📄</div>
-            <div className="file-details">
-              <h4>{selectedFile.name}</h4>
-              <p>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+        {/* Camera interface (desktop) */}
+        {showCamera && (
+          <div className="camera-modal">
+            <video ref={videoRef} autoPlay playsInline style={{ width: '100%', maxHeight: 320 }} />
+            <div className="camera-actions">
+              <button onClick={handleCapturePhoto} disabled={isLoading}>📸 Capture</button>
+              <button onClick={stopCamera} disabled={isLoading}>Cancel</button>
             </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation()
-                clearSelection()
-              }}
-              className="remove-file-btn"
-              disabled={isLoading}
-            >
-              ✕
-            </button>
           </div>
         )}
+
+        {/* Preview selected or captured image */}
+        {previewUrl && selectedFile && !showCamera ? (
+          <div className="image-preview">
+            <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 8 }} />
+            <button onClick={clearSelection} className="remove-file-btn" disabled={isLoading}>✕</button>
+          </div>
+        ) : !selectedFile && !showCamera ? (
+          <div className="upload-prompt">
+            <div className="upload-icon">📁</div>
+            <h3>Upload or Capture a Photo of Your Notes</h3>
+            <p>Drag and drop, browse, or use your camera</p>
+            <p className="file-info">
+              Supported: JPEG, PNG, BMP, TIFF (max 10MB)
+            </p>
+            <button type="button" className="camera-btn" onClick={handleTakePhotoClick} disabled={isLoading}>
+              📷 Take Photo
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {selectedFile && (
+      {selectedFile && !showCamera && (
         <div className="upload-actions">
+          <label className="semantic-toggle">
+            <input
+              type="checkbox"
+              checked={semanticMode}
+              onChange={e => setSemanticMode(e.target.checked)}
+              disabled={isLoading}
+            />
+            <span>AI Semantic Extraction (beta)</span>
+          </label>
           <button 
             onClick={handleUpload}
             disabled={isLoading}
@@ -175,17 +240,16 @@ const UploadForm = ({ onSuccess, onError, onLoadingChange, isLoading }) => {
               </>
             ) : (
               <>
-                🚀 Extract Text & Flashcards
+                {semanticMode ? '🤖 Semantic Extract' : '🚀 Extract Text & Flashcards'}
               </>
             )}
           </button>
-          
           <button 
             onClick={clearSelection}
             disabled={isLoading}
             className="cancel-btn"
           >
-            Cancel
+            Retake / Cancel
           </button>
         </div>
       )}
