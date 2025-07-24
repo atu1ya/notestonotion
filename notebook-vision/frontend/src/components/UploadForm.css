@@ -1,0 +1,270 @@
+/* Upload Form Styles */
+.upload-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-area:hover {
+  border-color: #667eea;
+  background-color: #f0f4ff;
+}
+
+.upload-area.drag-over {
+  border-color: #667eea;
+  background-color: #e8f2ff;
+  transform: scale(1.02);
+}
+
+.upload-area.has-file {
+  border-color: #4caf50;
+  background-color: #f1f8e9;
+  cursor: default;
+}
+
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+}
+
+/* Upload Prompt */
+.upload-prompt {
+  pointer-events: none;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.upload-prompt h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.upload-prompt p {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.file-info {
+  font-size: 0.9rem;
+  color: #888;
+  margin-top: 1rem;
+}
+
+/* File Selected */
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.file-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.file-details {
+  flex: 1;
+  text-align: left;
+}
+
+.file-details h4 {
+  margin: 0 0 0.25rem 0;
+  color: #333;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.file-details p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.remove-file-btn {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-file-btn:hover {
+  background: #ff5252;
+}
+
+.remove-file-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Upload Actions */
+.upload-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 200px;
+  justify-content: center;
+}
+
+.upload-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.upload-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cancel-btn {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.cancel-btn:disabled {
+  color: #ccc;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+
+/* Button spinner */
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Upload Tips */
+.upload-tips {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.upload-tips h4 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.upload-tips ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #666;
+}
+
+.upload-tips li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .upload-area {
+    padding: 1.5rem;
+    min-height: 160px;
+  }
+  
+  .upload-icon {
+    font-size: 2.5rem;
+  }
+  
+  .upload-prompt h3 {
+    font-size: 1.3rem;
+  }
+  
+  .upload-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .upload-btn,
+  .cancel-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+  
+  .file-selected {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .file-details {
+    text-align: center;
+  }
+  
+  .upload-tips {
+    padding: 1rem;
+  }
+}
