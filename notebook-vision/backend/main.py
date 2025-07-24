@@ -1,3 +1,48 @@
+# --- AI-Driven Question Generation with Local LLM (Ollama) ---
+@app.post("/api/generate-questions/")
+async def generate_questions(payload: dict):
+    """
+    Generate question-answer pairs from pasted or extracted notes using local Ollama LLM.
+    Input: { "text": "<user notes>" }
+    Output: { "questions": [ { "type": ..., "question": ..., "answer": ... }, ... ] }
+    """
+    text = payload.get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided.")
+
+    ollama_url = "http://localhost:11434/api/generate"
+    model = "llama3"  # or another math-capable model
+    prompt = (
+        "You are an expert educator. Given the following notes, generate a set of question-answer pairs that progress from basic recall to conceptual and mathematical/application questions. "
+        "Group each pair by type: basic, intermediate, advanced, math. If the topic allows, include at least one math question. "
+        "Return a JSON array of objects: { 'type': 'basic|intermediate|advanced|math', 'question': '...', 'answer': '...' }. "
+        "Each object MUST have both a 'question' and a correct 'answer'. "
+        "Notes: " + text + "\n\nOutput:"
+    )
+    ollama_payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False
+    }
+    try:
+        response = requests.post(ollama_url, json=ollama_payload, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+        # Try to extract JSON from the LLM response
+        import re, json as pyjson
+        content = result.get("response", "")
+        match = re.search(r'\[.*\]', content, re.DOTALL)
+        if match:
+            questions = pyjson.loads(match.group(0))
+        else:
+            questions = []
+        # Validate that each question has both 'question' and 'answer'
+        valid = all(isinstance(q, dict) and q.get('question') and q.get('answer') for q in questions)
+        if not valid or not questions:
+            raise HTTPException(status_code=500, detail="LLM did not return valid question-answer pairs.")
+        return {"questions": questions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ollama LLM error: {str(e)}")
 import logging
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
